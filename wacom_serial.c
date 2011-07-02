@@ -47,15 +47,15 @@ struct wacom {
 static void handle_response(struct wacom *wacom)
 {
 	if (wacom->data[0] != '~' || wacom->idx < 2) {
-		wacom->data[wacom->idx] = 0;
-		dev_dbg(&wacom->dev->dev, "got a garbled response of length %d.\n", wacom->idx);
+		dev_dbg(&wacom->dev->dev, "got a garbled response of length "
+			                  "%d.\n", wacom->idx);
 		return;
 	}
 
 	wacom->data[wacom->idx] = 0;
 	switch (wacom->data[1]) {
 	case '#':
-		dev_info(&wacom->dev->dev, "model: Wacom tablet: %s\n", wacom->data);
+		dev_info(&wacom->dev->dev, "Wacom tablet: %s\n", wacom->data);
 		input_set_abs_params(wacom->dev, ABS_PRESSURE, 0, 255, 0, 0);
 		break;
 	case 'R':
@@ -104,9 +104,12 @@ static void handle_packet(struct wacom *wacom)
 	input_report_abs(wacom->dev, ABS_X, x);
 	input_report_abs(wacom->dev, ABS_Y, y);
 	input_report_abs(wacom->dev, ABS_PRESSURE, z+127);
-	input_report_key(wacom->dev, BTN_TOOL_MOUSE, in_proximity_p && !stylus_p);
-	input_report_key(wacom->dev, BTN_TOOL_RUBBER, in_proximity_p && stylus_p && button&4);
-	input_report_key(wacom->dev, BTN_TOOL_PEN, in_proximity_p && stylus_p && !(button&4));
+	input_report_key(wacom->dev, BTN_TOOL_MOUSE, in_proximity_p &&
+			                             !stylus_p);
+	input_report_key(wacom->dev, BTN_TOOL_RUBBER, in_proximity_p &&
+			                              stylus_p && button&4);
+	input_report_key(wacom->dev, BTN_TOOL_PEN, in_proximity_p && stylus_p &&
+                                                   !(button&4));
 	input_report_key(wacom->dev, BTN_TOUCH, button & 1);
 	input_report_key(wacom->dev, BTN_STYLUS, button & 2);
 	/* input_report_key(wacom->dev, BTN_STYLUS2, button & 2); */
@@ -122,7 +125,8 @@ static irqreturn_t wacom_interrupt(struct serio *serio, unsigned char data,
 	if (data & 0x80)
 		wacom->idx = 0;
 	if (wacom->idx >= sizeof(wacom->data)) {
-		dev_dbg(&wacom->dev->dev, "throwing away %d bytes of garbage\n", wacom->idx);
+		dev_dbg(&wacom->dev->dev, "throwing away %d bytes of garbage\n",
+			wacom->idx);
 		wacom->idx = 0;
 	}
 
@@ -181,12 +185,12 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 	input_dev->dev.parent = &serio->dev;
 
 	input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
-	input_dev->keybit[BIT_WORD(BTN_TOOL_PEN)] |= BIT_MASK(BTN_TOOL_PEN);
-	input_dev->keybit[BIT_WORD(BTN_TOOL_RUBBER)] |= BIT_MASK(BTN_TOOL_RUBBER);
-	input_dev->keybit[BIT_WORD(BTN_TOOL_MOUSE)] |= BIT_MASK(BTN_TOOL_MOUSE);
-	input_dev->keybit[BIT_WORD(BTN_TOUCH)] |= BIT_MASK(BTN_TOUCH);
-	input_dev->keybit[BIT_WORD(BTN_STYLUS)] |= BIT_MASK(BTN_STYLUS);
-	input_dev->keybit[BIT_WORD(BTN_STYLUS2)] |= BIT_MASK(BTN_STYLUS2);
+	__set_bit(BTN_TOOL_PEN, input_dev->keybit);
+	__set_bit(BTN_TOOL_RUBBER, input_dev->keybit);
+	__set_bit(BTN_TOOL_MOUSE, input_dev->keybit);
+	__set_bit(BTN_TOUCH, input_dev->keybit);
+	__set_bit(BTN_STYLUS, input_dev->keybit);
+	__set_bit(BTN_STYLUS2, input_dev->keybit);
 
 	serio_set_drvdata(serio, wacom);
 
