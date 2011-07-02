@@ -1,0 +1,25 @@
+diff -u joystick-1.4.1/utils/inputattach.c joystick-patched/utils/inputattach.c
+--- joystick-1.4.1/utils/inputattach.c	2011-06-25 09:16:58.000000000 -0400
++++ joystick-patched/utils/inputattach.c	2011-07-01 13:48:15.000000000 -0400
+@@ -588,6 +588,9 @@
+ { "--w8001",		"-w8001",	"Wacom W8001",
+ 	B38400, CS8,
+ 	SERIO_W8001,		0x00,	0x00,	0,	NULL },
++{ "--wacom_iv",		"-wacom_iv",	"Wacom protocol 4 tablet",
++	B9600, CS8,
++	SERIO_WACOM_IV,		0x00,	0x00,	0,	NULL },
+ { NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL }
+ };
+ 
+diff -u joystick-1.4.1/utils/serio-ids.h joystick-patched/utils/serio-ids.h
+--- joystick-1.4.1/utils/serio-ids.h	2010-11-04 02:15:02.000000000 -0400
++++ joystick-patched/utils/serio-ids.h	2011-07-01 13:48:33.000000000 -0400
+@@ -125,5 +125,8 @@
+ #ifndef SERIO_PSMULT
+ # define SERIO_PS2MULT		0x3c
+ #endif
++#ifndef SERIO_WACOM_IV
++# define SERIO_WACOM_IV		0x3d
++#endif
+ 
+ #endif
