@@ -1,0 +1,9 @@
+--- linux/include/linux/serio.h	2011-05-19 00:06:34.000000000 -0400
++++ serio.h	2011-07-02 10:37:02.000000000 -0400
+@@ -199,5 +199,6 @@
+ #define SERIO_DYNAPRO	0x3a
+ #define SERIO_HAMPSHIRE	0x3b
+ #define SERIO_PS2MULT	0x3c
++#define SERIO_WACOM_IV	0x3d
+ 
+ #endif
