@@ -11,6 +11,7 @@
 #include <linux/input.h>
 #include <linux/serio.h>
 #include <linux/slab.h>
+#include <linux/completion.h>
 #define DRIVER_AUTHOR	"Julian Squires <julian@cipht.net>"
 #define DRIVER_DESC	"Wacom protocol 4 serial tablet driver"
 
@@ -35,8 +36,9 @@ MODULE_LICENSE("GPL");
 
 struct wacom {
 	struct input_dev *dev;
+	struct completion cmd_done;
 	int idx;
-	char data[32];
+	unsigned char data[32];
 	char phys[32];
 };
 
@@ -54,20 +56,31 @@ static void handle_response(struct wacom *wacom)
 	switch (wacom->data[1]) {
 	case '#':
 		dev_info(&wacom->dev->dev, "model: Wacom tablet: %s\n", wacom->data);
-		input_set_abs_params(wacom->dev, ABS_X, 0, 10240, 4, 0);
-		input_set_abs_params(wacom->dev, ABS_Y, 0, 7680, 4, 0);
 		input_set_abs_params(wacom->dev, ABS_PRESSURE, 0, 255, 0, 0);
-		return;
+		break;
 	case 'R':
-		dev_dbg(&wacom->dev->dev, "configuration: %s\n", wacom->data);
-		return;
-	case 'C':
-		dev_dbg(&wacom->dev->dev, "coordinates: %s\n", wacom->data);
-		return;
-	default:
-		dev_dbg(&wacom->dev->dev, "got a response we don't understand: %s\n", wacom->data);
-		return;
+	{
+		int res_x, res_y, unused;
+		sscanf(wacom->data, "~R%x,%x,%x,%u,%u", &unused, &unused,
+		       &unused, &res_x, &res_y);
+		input_abs_set_res(wacom->dev, ABS_X, res_x);
+		input_abs_set_res(wacom->dev, ABS_Y, res_y);
+		break;
 	}
+	case 'C':
+	{
+		int abs_x, abs_y;
+		sscanf(wacom->data, "~C%u,%u", &abs_x, &abs_y);
+		input_set_abs_params(wacom->dev, ABS_X, 0, abs_x, 0, 0);
+		input_set_abs_params(wacom->dev, ABS_Y, 0, abs_y, 0, 0);
+		break;
+	}
+	default:
+		dev_dbg(&wacom->dev->dev, "got an unexpected response: %s\n",
+			wacom->data);
+		break;
+	}
+	complete(&wacom->cmd_done);
 }
 
 static void handle_packet(struct wacom *wacom)
@@ -118,10 +131,13 @@ static irqreturn_t wacom_interrupt(struct serio *serio, unsigned char data,
 	/* we're either expecting a carriage return-terminated ASCII
 	 * response string, or a seven-byte packet with the MSB set on
 	 * the first byte */
-	if (wacom->idx == PACKET_LENGTH && (wacom->data[0] & 0x80))
+	if (wacom->idx == PACKET_LENGTH && (wacom->data[0] & 0x80)) {
 		handle_packet(wacom);
-	else if (data == '\r' && !(wacom->data[0] & 0x80))
+		wacom->idx = 0;
+	} else if (data == '\r' && !(wacom->data[0] & 0x80)) {
 		handle_response(wacom);
+		wacom->idx = 0;
+	}
 	return IRQ_HANDLED;
 }
 
@@ -179,14 +195,18 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 		goto fail1;
 
 	wacom_send(serio, REQUEST_STOP_SENDING_PACKETS);
+	init_completion(&wacom->cmd_done);
 	wacom_send(serio, REQUEST_MODEL_AND_ROM_VERSION);
+	wait_for_completion_timeout(&wacom->cmd_done, HZ);
+	/* It seems that wcmUSB does something stupid with this,
+	   so let's not query it presently. */
+	/* init_completion(&wacom->cmd_done);
+	   wacom_send(serio, REQUEST_CONFIGURATION_STRING);
+	   wait_for_completion_timeout(&wacom->cmd_done, HZ); */
+	init_completion(&wacom->cmd_done);
+	wacom_send(serio, REQUEST_MAX_COORDINATES);
+	wait_for_completion_timeout(&wacom->cmd_done, HZ);
 	wacom_send(serio, REQUEST_START_SENDING_PACKETS);
-	input_set_abs_params(wacom->dev, ABS_X, 0, 10240, 0, 0);
-	input_set_abs_params(wacom->dev, ABS_Y, 0, 7680, 0, 0);
-	input_set_abs_params(wacom->dev, ABS_PRESSURE, 0, 255, 0, 0);
-	/* It seems that wcmUSB does something stupid with this, so let's not set it presently. */
-	/* input_abs_set_res(wacom->dev, ABS_X, 1270);
-	   input_abs_set_res(wacom->dev, ABS_Y, 1270); */
 
 	err = input_register_device(wacom->dev);
 	if (err)
