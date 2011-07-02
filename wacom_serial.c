@@ -1,6 +1,12 @@
 /*
  * Wacom protocol 4 serial tablet driver
  *
+ * To do:
+ *  - support pad buttons;
+ *  - support (protocol 4-style) tilt;
+ *  - support suppress;
+ *  - support Graphire relative wheel.
+ *
  * Sections I have been unable to test personally due to lack of available
  * hardware are marked UNTESTED.  Much of what is marked UNTESTED comes from
  * reading the wcmSerial code in linuxwacom 0.9.0.
@@ -18,6 +24,7 @@
  *    Frederic Lepied and Raph Levien <raph@gtk.org>.
  */
 
+/* XXX To be removed before (widespread) release. */
 #define DEBUG
 
 #include <linux/string.h>
@@ -29,6 +36,12 @@
 #include <linux/serio.h>
 #include <linux/slab.h>
 #include <linux/completion.h>
+
+/* XXX To be removed before (widespread) release. */
+#ifndef SERIO_WACOM_IV
+#define SERIO_WACOM_IV 0x3d
+#endif
+
 #define DRIVER_AUTHOR	"Julian Squires <julian@cipht.net>"
 #define DEVICE_NAME	"Wacom protocol 4 serial tablet"
 #define DRIVER_DESC	DEVICE_NAME " driver"
