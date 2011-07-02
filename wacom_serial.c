@@ -90,7 +90,7 @@ static void handle_packet(struct wacom *wacom)
 	input_report_key(wacom->dev, ABS_MISC, device);
 	input_report_abs(wacom->dev, ABS_X, x);
 	input_report_abs(wacom->dev, ABS_Y, y);
-	input_report_abs(wacom->dev, ABS_PRESSURE, z);
+	input_report_abs(wacom->dev, ABS_PRESSURE, z+127);
 	input_report_key(wacom->dev, BTN_TOOL_MOUSE, in_proximity_p && !stylus_p);
 	input_report_key(wacom->dev, BTN_TOOL_RUBBER, in_proximity_p && stylus_p && button&4);
 	input_report_key(wacom->dev, BTN_TOOL_PEN, in_proximity_p && stylus_p && !(button&4));
