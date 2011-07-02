@@ -1,7 +1,21 @@
 /*
+ * Wacom protocol 4 serial tablet driver
  *
  * Sections I have been unable to test personally due to lack of available
- * hardware are marked UNTESTED.
+ * hardware are marked UNTESTED.  Much of what is marked UNTESTED comes from
+ * reading the wcmSerial code in linuxwacom 0.9.0.
+ *
+ * This driver was developed with reference to much code written by others,
+ * particularly:
+ *  - elo, gunze drivers by Vojtech Pavlik <vojtech@ucw.cz>;
+ *  - wacom_w8001 driver by Jaya Kumar <jayakumar.lkml@gmail.com>;
+ *  - the USB wacom input driver, credited to many people
+ *    (see drivers/input/tablet/wacom.h);
+ *  - new and old versions of linuxwacom / xf86-input-wacom credited to
+ *    Frederic Lepied, France. <Lepied@XFree86.org> and
+ *    Ping Cheng, Wacom. <pingc@wacom.com>;
+ *  - and xf86wacom.c (a presumably ancient version of the linuxwacom code), by
+ *    Frederic Lepied and Raph Levien <raph@gtk.org>.
  */
 
 #define DEBUG
@@ -16,7 +30,8 @@
 #include <linux/slab.h>
 #include <linux/completion.h>
 #define DRIVER_AUTHOR	"Julian Squires <julian@cipht.net>"
-#define DRIVER_DESC	"Wacom protocol 4 serial tablet driver"
+#define DEVICE_NAME	"Wacom protocol 4 serial tablet"
+#define DRIVER_DESC	DEVICE_NAME " driver"
 
 MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESC);
@@ -43,7 +58,7 @@ MODULE_LICENSE("GPL");
 #define PACKET_LENGTH 7
 
 /* device IDs from wacom_wac.h */
-#define STYLUS_DEVICE_ID        0x02
+#define STYLUS_DEVICE_ID	0x02
 #define TOUCH_DEVICE_ID         0x03
 #define CURSOR_DEVICE_ID        0x06
 #define ERASER_DEVICE_ID        0x0A
@@ -109,12 +124,12 @@ static void handle_model_response(struct wacom *wacom)
 	case MODEL_GRAPHIRE:	/* UNTESTED */
 		p = "Graphire";
 		wacom->dev->id.version = MODEL_GRAPHIRE;
+		/* UNTESTED: Apparently Graphire models do not answer coordinate
+		   requests; see also wacom_setup(). */
 		input_set_abs_params(wacom->dev, ABS_X, 0, 5103, 0, 0);
 		input_set_abs_params(wacom->dev, ABS_Y, 0, 3711, 0, 0);
-		/*
-                 * input_abs_set_res(wacom->dev, ABS_X, 0, 1016);
-		 * input_abs_set_res(wacom->dev, ABS_Y, 0, 1016);
-                 */
+		input_abs_set_res(wacom->dev, ABS_X, 1016);
+		input_abs_set_res(wacom->dev, ABS_Y, 1016);
 		wacom->extra_z_bits = 2;
 		break;
 	case MODEL_DIGITIZER_II:
@@ -359,7 +374,7 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 	wacom->extra_z_bits = 1;
 	snprintf(wacom->phys, sizeof(wacom->phys), "%s/input0", serio->phys);
 
-	input_dev->name = "Wacom protocol IV serial tablet";
+	input_dev->name = DEVICE_NAME;
 	input_dev->phys = wacom->phys;
 	input_dev->id.bustype = BUS_RS232;
 	input_dev->id.vendor  = SERIO_WACOM_IV;
