@@ -245,7 +245,6 @@ static void handle_packet(struct wacom *wacom)
                                                    !(button&4));
 	input_report_key(wacom->dev, BTN_TOUCH, button & 1);
 	input_report_key(wacom->dev, BTN_STYLUS, button & 2);
-	/* input_report_key(wacom->dev, BTN_STYLUS2, button & 2); */
 	input_sync(wacom->dev);
 }
 
@@ -401,7 +400,6 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 	__set_bit(BTN_TOOL_MOUSE, input_dev->keybit);
 	__set_bit(BTN_TOUCH, input_dev->keybit);
 	__set_bit(BTN_STYLUS, input_dev->keybit);
-	__set_bit(BTN_STYLUS2, input_dev->keybit);
 
 	serio_set_drvdata(serio, wacom);
 
