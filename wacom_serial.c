@@ -22,14 +22,24 @@ MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESC);
 MODULE_LICENSE("GPL");
 
-#define REQUEST_MODEL_AND_ROM_VERSION "~#"
-#define REQUEST_MAX_COORDINATES "~C"
-#define REQUEST_CONFIGURATION_STRING "~R"
-#define REQUEST_RESET_TO_PROTOCOL_IV "\r#"
+#define REQUEST_MODEL_AND_ROM_VERSION	"~#\r"
+#define REQUEST_MAX_COORDINATES		"~C\r"
+#define REQUEST_CONFIGURATION_STRING	"~R\r"
+#define REQUEST_RESET_TO_PROTOCOL_IV	"\r#\r"
 
-#define REQUEST_START_SENDING_PACKETS "ST"
-#define REQUEST_STOP_SENDING_PACKETS "SP"
+#define COMMAND_START_SENDING_PACKETS		"ST\r"
+#define COMMAND_STOP_SENDING_PACKETS		"SP\r"
+#define COMMAND_MULTI_MODE_INPUT		"MU1\r"
+#define COMMAND_ORIGIN_IN_UPPER_LEFT		"OC1\r"
+#define COMMAND_ENABLE_ALL_MACRO_BUTTONS	"~M0\r"
+#define COMMAND_DISABLE_GROUP_1_MACRO_BUTTONS	"~M1\r"
+#define COMMAND_TRANSMIT_AT_MAX_RATE		"IT0\r"
+#define COMMAND_DISABLE_INCREMENTAL_MODE	"IN0\r"
+#define COMMAND_ENABLE_CONTINUOUS_MODE		"SR\r"
+#define COMMAND_ENABLE_PRESSURE_MODE		"PH1\r"
+#define COMMAND_Z_FILTER			"ZF1\r"
 
+/* Note that this is a protocol 4 packet without tilt information. */
 #define PACKET_LENGTH 7
 
 /* device IDs from wacom_wac.h */
@@ -251,43 +261,87 @@ static void wacom_disconnect(struct serio *serio)
 	kfree(wacom);
 }
 
-static void wacom_send(struct serio *serio, const char *command)
+static int wacom_send(struct serio *serio, const char *command)
 {
-	for (; *command; command++)
-		serio_write(serio, *command);
-	serio_write(serio, '\r');
+	int err = 0;
+	for (; !err && *command; command++)
+		err = serio_write(serio, *command);
+	return err;
 }
 
-static void send_setup_string(struct wacom *wacom, struct serio *serio)
+static int send_setup_string(struct wacom *wacom, struct serio *serio)
 {
-	wacom_send(serio, REQUEST_START_SENDING_PACKETS);
+	const char *s;
+	switch (wacom->dev->id.version) {
+	case MODEL_CINTIQ:	/* UNTESTED */
+		s = COMMAND_ORIGIN_IN_UPPER_LEFT
+			COMMAND_TRANSMIT_AT_MAX_RATE
+			COMMAND_ENABLE_CONTINUOUS_MODE
+			COMMAND_START_SENDING_PACKETS;
+		break;
+	case MODEL_PENPARTNER:	/* UNTESTED */
+		s = COMMAND_ENABLE_PRESSURE_MODE
+			COMMAND_START_SENDING_PACKETS;
+		break;
+	default:
+		s = COMMAND_MULTI_MODE_INPUT
+			COMMAND_ORIGIN_IN_UPPER_LEFT
+			COMMAND_ENABLE_ALL_MACRO_BUTTONS
+			COMMAND_DISABLE_GROUP_1_MACRO_BUTTONS
+			COMMAND_TRANSMIT_AT_MAX_RATE
+			COMMAND_DISABLE_INCREMENTAL_MODE
+			COMMAND_ENABLE_CONTINUOUS_MODE
+			COMMAND_Z_FILTER
+			COMMAND_START_SENDING_PACKETS;
+		break;
+	}
+	return wacom_send(serio, s);
 }
 
-static void wacom_setup(struct wacom *wacom, struct serio *serio)
+static int wacom_setup(struct wacom *wacom, struct serio *serio)
 {
+	int err;
+	unsigned long u;
+
 	/* Note that setting the link speed is the job of inputattach.
 	 * We assume that reset negotiation has already happened,
 	 * here. */
-	wacom_send(serio, REQUEST_STOP_SENDING_PACKETS);
+	err = wacom_send(serio, COMMAND_STOP_SENDING_PACKETS);
+	if (err)
+		return err;
 	init_completion(&wacom->cmd_done);
-	wacom_send(serio, REQUEST_MODEL_AND_ROM_VERSION);
-	wait_for_completion_timeout(&wacom->cmd_done, HZ);
+	err = wacom_send(serio, REQUEST_MODEL_AND_ROM_VERSION);
+	if (err)
+		return err;
+	u = wait_for_completion_timeout(&wacom->cmd_done, HZ);
+	if (u == 0) {
+		dev_info(&wacom->dev->dev, "Timed out waiting for tablet to "
+			 "respond with model and version.\n");
+		return -EIO;
+	}
 
-	/* It seems that wcmUSB does something stupid with this,
-	   so let's not query it presently. */
-	/* init_completion(&wacom->cmd_done);
-	   wacom_send(serio, REQUEST_CONFIGURATION_STRING);
-	   wait_for_completion_timeout(&wacom->cmd_done, HZ); */
+	init_completion(&wacom->cmd_done);
+	err = wacom_send(serio, REQUEST_CONFIGURATION_STRING);
+	if (err)
+		return err;
+	u = wait_for_completion_timeout(&wacom->cmd_done, HZ);
+	if (u == 0) {
+		dev_info(&wacom->dev->dev, "Timed out waiting for tablet to "
+			 "respond with configuration string.\n");
+		return -EIO;
+	}
 
-	/* Note UNTESTED: Apparently Graphire models do not answer
-	   coordinate requests. */
+	/* UNTESTED: Apparently Graphire models do not answer coordinate
+	   requests. */
 	if (wacom->dev->id.version != MODEL_GRAPHIRE) {
 		init_completion(&wacom->cmd_done);
-		wacom_send(serio, REQUEST_MAX_COORDINATES);
+		err = wacom_send(serio, REQUEST_MAX_COORDINATES);
+		if (err)
+			return err;
 		wait_for_completion_timeout(&wacom->cmd_done, HZ);
 	}
 
-	send_setup_string(wacom, serio);
+	return send_setup_string(wacom, serio);
 }
 
 static int wacom_connect(struct serio *serio, struct serio_driver *drv)
@@ -327,7 +381,9 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 	if (err)
 		goto fail1;
 
-	wacom_setup(wacom, serio);
+	err = wacom_setup(wacom, serio);
+	if (err)
+		goto fail2;
 
 	err = input_register_device(wacom->dev);
 	if (err)
