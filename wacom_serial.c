@@ -272,7 +272,7 @@ static irqreturn_t wacom_interrupt(struct serio *serio, unsigned char data,
 		handle_packet(wacom);
 		wacom->idx = 0;
 	} else if (data == '\r' && !(wacom->data[0] & 0x80)) {
-		wacom->data[wacom->idx] = 0;
+		wacom->data[wacom->idx-1] = 0;
 		handle_response(wacom);
 		wacom->idx = 0;
 	}
