@@ -50,10 +50,10 @@ MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESC);
 MODULE_LICENSE("GPL");
 
-#define REQUEST_MODEL_AND_ROM_VERSION	"~#\r"
+#define REQUEST_MODEL_AND_ROM_VERSION	"~#"
 #define REQUEST_MAX_COORDINATES		"~C\r"
 #define REQUEST_CONFIGURATION_STRING	"~R\r"
-#define REQUEST_RESET_TO_PROTOCOL_IV	"\r#\r"
+#define REQUEST_RESET_TO_PROTOCOL_IV	"\r#"
 
 #define COMMAND_START_SENDING_PACKETS		"ST\r"
 #define COMMAND_STOP_SENDING_PACKETS		"SP\r"
@@ -180,6 +180,7 @@ static void handle_coordinates_response(struct wacom *wacom)
 {
 	int x, y;
 
+	dev_dbg(&wacom->dev->dev, "Coordinates string: %s\n", wacom->data);
 	sscanf(wacom->data, "~C%u,%u", &x, &y);
 	input_set_abs_params(wacom->dev, ABS_X, 0, x, 0, 0);
 	input_set_abs_params(wacom->dev, ABS_Y, 0, y, 0, 0);
@@ -354,18 +355,17 @@ static int wacom_setup(struct wacom *wacom, struct serio *serio)
 	u = wait_for_completion_timeout(&wacom->cmd_done, HZ);
 	if (u == 0) {
 		dev_info(&wacom->dev->dev, "Timed out waiting for tablet to "
-			 "respond with configuration string.\n");
-		return -EIO;
+			 "respond with configuration string.  Continuing anyway.\n");
 	}
 
-	/* UNTESTED: Apparently Graphire models do not answer coordinate
-	   requests. */
-	if (wacom->dev->id.version != MODEL_GRAPHIRE) {
-		init_completion(&wacom->cmd_done);
-		err = wacom_send(serio, REQUEST_MAX_COORDINATES);
-		if (err)
-			return err;
-		wait_for_completion_timeout(&wacom->cmd_done, HZ);
+	init_completion(&wacom->cmd_done);
+	err = wacom_send(serio, REQUEST_MAX_COORDINATES);
+	if (err)
+		return err;
+	u = wait_for_completion_timeout(&wacom->cmd_done, HZ);
+	if (u == 0) {
+		dev_info(&wacom->dev->dev, "Timed out waiting for tablet to "
+			 "respond with coordinates string.  Continuing anyway.\n");
 	}
 
 	return send_setup_string(wacom, serio);
