@@ -1,15 +1,20 @@
 /*
  * Wacom protocol 4 serial tablet driver
  *
+ * Many thanks to Bill Seremetis, without whom PenPartner support
+ * would not have been possible.
+ *
+ * Sections I have been unable to test personally due to lack of
+ * available hardware are marked UNTESTED.  Much of what is marked
+ * UNTESTED comes from reading the wcmSerial code in linuxwacom 0.9.0.
+ * If you have a tablet that corresponds to an UNTESTED section,
+ * please email me your results.
+ *
  * To do:
  *  - support pad buttons;
  *  - support (protocol 4-style) tilt;
  *  - support suppress;
  *  - support Graphire relative wheel.
- *
- * Sections I have been unable to test personally due to lack of available
- * hardware are marked UNTESTED.  Much of what is marked UNTESTED comes from
- * reading the wcmSerial code in linuxwacom 0.9.0.
  *
  * This driver was developed with reference to much code written by others,
  * particularly:
@@ -54,6 +59,8 @@ MODULE_LICENSE("GPL");
 #define REQUEST_MAX_COORDINATES		"~C\r"
 #define REQUEST_CONFIGURATION_STRING	"~R\r"
 #define REQUEST_RESET_TO_PROTOCOL_IV	"\r#"
+/* Note: sending "\r$\r" causes at least the Digitizer II to send
+ * packets in ASCII instead of binary.  "\r#" seems to undo that. */
 
 #define COMMAND_START_SENDING_PACKETS		"ST\r"
 #define COMMAND_STOP_SENDING_PACKETS		"SP\r"
@@ -129,7 +136,7 @@ static void handle_model_response(struct wacom *wacom)
 			wacom->extra_z_bits = 2;
 		}
 		break;
-	case MODEL_PENPARTNER:	/* UNTESTED */
+	case MODEL_PENPARTNER:
 		p = "Penpartner";
 		wacom->dev->id.version = MODEL_PENPARTNER;
 		/* wcmSerial sets res 1000x1000 in this case. */
@@ -191,8 +198,12 @@ static void handle_response(struct wacom *wacom)
 	if (wacom->data[0] != '~' || wacom->idx < 2) {
 		dev_dbg(&wacom->dev->dev, "got a garbled response of length "
 			                  "%d.\n", wacom->idx);
+		wacom->idx = 0;
 		return;
 	}
+
+	wacom->data[wacom->idx-1] = 0;
+	wacom->idx = 0;
 
 	switch (wacom->data[1]) {
 	case '#':
@@ -265,16 +276,18 @@ static irqreturn_t wacom_interrupt(struct serio *serio, unsigned char data,
 
 	wacom->data[wacom->idx++] = data;
 
-	/* we're either expecting a carriage return-terminated ASCII
+	/* We're either expecting a carriage return-terminated ASCII
 	 * response string, or a seven-byte packet with the MSB set on
-	 * the first byte */
+	 * the first byte.
+	 *
+	 * Note however that some tablets (the PenPartner, for
+	 * example) don't send a carriage return at the end of a
+	 * command.  We handle these by waiting for timeout. */
 	if (wacom->idx == PACKET_LENGTH && (wacom->data[0] & 0x80)) {
 		handle_packet(wacom);
 		wacom->idx = 0;
 	} else if (data == '\r' && !(wacom->data[0] & 0x80)) {
-		wacom->data[wacom->idx-1] = 0;
 		handle_response(wacom);
-		wacom->idx = 0;
 	}
 	return IRQ_HANDLED;
 }
@@ -307,7 +320,7 @@ static int send_setup_string(struct wacom *wacom, struct serio *serio)
 			COMMAND_ENABLE_CONTINUOUS_MODE
 			COMMAND_START_SENDING_PACKETS;
 		break;
-	case MODEL_PENPARTNER:	/* UNTESTED */
+	case MODEL_PENPARTNER:
 		s = COMMAND_ENABLE_PRESSURE_MODE
 			COMMAND_START_SENDING_PACKETS;
 		break;
@@ -334,18 +347,18 @@ static int wacom_setup(struct wacom *wacom, struct serio *serio)
 	/* Note that setting the link speed is the job of inputattach.
 	 * We assume that reset negotiation has already happened,
 	 * here. */
-	err = wacom_send(serio, COMMAND_STOP_SENDING_PACKETS);
-	if (err)
-		return err;
 	init_completion(&wacom->cmd_done);
 	err = wacom_send(serio, REQUEST_MODEL_AND_ROM_VERSION);
 	if (err)
 		return err;
 	u = wait_for_completion_timeout(&wacom->cmd_done, HZ);
 	if (u == 0) {
-		dev_info(&wacom->dev->dev, "Timed out waiting for tablet to "
-			 "respond with model and version.\n");
-		return -EIO;
+		if(wacom->idx == 0) {
+			dev_info(&wacom->dev->dev, "Timed out waiting for tablet to "
+				 "respond with model and version.\n");
+			return -EIO;
+		}
+		handle_response(wacom);
 	}
 
 	init_completion(&wacom->cmd_done);
@@ -354,8 +367,11 @@ static int wacom_setup(struct wacom *wacom, struct serio *serio)
 		return err;
 	u = wait_for_completion_timeout(&wacom->cmd_done, HZ);
 	if (u == 0) {
-		dev_info(&wacom->dev->dev, "Timed out waiting for tablet to "
-			 "respond with configuration string.  Continuing anyway.\n");
+		if(wacom->idx == 0)
+			dev_info(&wacom->dev->dev, "Timed out waiting for tablet to "
+				 "respond with configuration string.  Continuing anyway.\n");
+		else
+			handle_response(wacom);
 	}
 
 	init_completion(&wacom->cmd_done);
@@ -364,8 +380,11 @@ static int wacom_setup(struct wacom *wacom, struct serio *serio)
 		return err;
 	u = wait_for_completion_timeout(&wacom->cmd_done, HZ);
 	if (u == 0) {
-		dev_info(&wacom->dev->dev, "Timed out waiting for tablet to "
-			 "respond with coordinates string.  Continuing anyway.\n");
+		if(wacom->idx == 0)
+			dev_info(&wacom->dev->dev, "Timed out waiting for tablet to "
+				 "respond with coordinates string.  Continuing anyway.\n");
+		else
+			handle_response(wacom);
 	}
 
 	return send_setup_string(wacom, serio);
