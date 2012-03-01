@@ -1,25 +1,56 @@
-diff -u joystick-1.4.1/utils/inputattach.c joystick-patched/utils/inputattach.c
---- joystick-1.4.1/utils/inputattach.c	2011-06-25 09:16:58.000000000 -0400
-+++ joystick-patched/utils/inputattach.c	2011-07-01 13:48:15.000000000 -0400
-@@ -588,6 +588,9 @@
+--- /home/julian/dl/joystick-1.4.2/utils/inputattach.c	2011-08-09 01:43:10.000000000 -0400
++++ inputattach.c	2012-03-01 13:52:56.369310089 -0500
+@@ -459,6 +459,43 @@
+ 		}
+ }
+ 
++#define WACOM_IV_RESET_BAUD "\r$"
++#define WACOM_IV_RESET "\r#"
++#define WACOM_IV_STOP "SP\r"
++enum { WACOM_IV_RESET_BAUD_LEN = 2, WACOM_IV_RESET_LEN = 2, WACOM_IV_STOP_LEN = 3 };
++
++static int wacom_iv_init(int fd, unsigned long *id, unsigned long *extra)
++{
++	setline(fd, CS8 | CRTSCTS, B38400);
++	if (write(fd, WACOM_IV_RESET_BAUD, WACOM_IV_RESET_BAUD_LEN) != WACOM_IV_RESET_BAUD_LEN)
++		return -1;
++	usleep(250 * 1000);
++	if (write(fd, WACOM_IV_RESET, WACOM_IV_RESET_LEN) != WACOM_IV_RESET_LEN)
++		return -1;
++	usleep(75 * 1000);
++
++	setline(fd, CS8 | CRTSCTS, B19200);
++	if (write(fd, WACOM_IV_RESET_BAUD, WACOM_IV_RESET_BAUD_LEN) != WACOM_IV_RESET_BAUD_LEN)
++		return -1;
++	usleep(250 * 1000);
++	if (write(fd, WACOM_IV_RESET, WACOM_IV_RESET_LEN) != WACOM_IV_RESET_LEN)
++		return -1;
++	usleep(75 * 1000);
++
++	setline(fd, CS8 | CRTSCTS, B9600);
++	if (write(fd, WACOM_IV_RESET_BAUD, WACOM_IV_RESET_BAUD_LEN) != WACOM_IV_RESET_BAUD_LEN)
++		return -1;
++	usleep(250 * 1000);
++	if (write(fd, WACOM_IV_RESET, WACOM_IV_RESET_LEN) != WACOM_IV_RESET_LEN)
++		return -1;
++	usleep(75 * 1000);
++	if (write(fd, WACOM_IV_STOP, WACOM_IV_STOP_LEN) != WACOM_IV_STOP_LEN)
++		return -1;
++	usleep(30 * 1000);
++
++	return 0;
++}
++
+ struct input_types {
+ 	const char *name;
+ 	const char *name2;
+@@ -588,6 +625,9 @@
  { "--w8001",		"-w8001",	"Wacom W8001",
  	B38400, CS8,
  	SERIO_W8001,		0x00,	0x00,	0,	NULL },
 +{ "--wacom_iv",		"-wacom_iv",	"Wacom protocol 4 tablet",
-+	B9600, CS8,
-+	SERIO_WACOM_IV,		0x00,	0x00,	0,	NULL },
++	B9600, CS8 | CRTSCTS,
++	SERIO_WACOM_IV,		0x00,	0x00,	0,	wacom_iv_init },
  { NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, NULL }
  };
  
-diff -u joystick-1.4.1/utils/serio-ids.h joystick-patched/utils/serio-ids.h
---- joystick-1.4.1/utils/serio-ids.h	2010-11-04 02:15:02.000000000 -0400
-+++ joystick-patched/utils/serio-ids.h	2011-07-01 13:48:33.000000000 -0400
-@@ -125,5 +125,8 @@
- #ifndef SERIO_PSMULT
- # define SERIO_PS2MULT		0x3c
- #endif
-+#ifndef SERIO_WACOM_IV
-+# define SERIO_WACOM_IV		0x3d
-+#endif
- 
- #endif
