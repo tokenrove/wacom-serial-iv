@@ -4,6 +4,8 @@
  * Many thanks to Bill Seremetis, without whom PenPartner support
  * would not have been possible.
  *
+ * Thanks to Patrick Mahoney.
+ *
  * Sections I have been unable to test personally due to lack of
  * available hardware are marked UNTESTED.  Much of what is marked
  * UNTESTED comes from reading the wcmSerial code in linuxwacom 0.9.0.
@@ -84,10 +86,22 @@ MODULE_LICENSE("GPL");
 #define ERASER_DEVICE_ID        0x0A
 #define PAD_DEVICE_ID           0x0F
 
+#define PAD_SERIAL 0xF0
+
+enum { STYLUS = 1, ERASER, PAD, CURSOR, TOUCH };
+struct { int device_id; int input_id; } tools[] = { 
+	{ 0,0 },
+	{ STYLUS_DEVICE_ID, BTN_TOOL_PEN },
+	{ ERASER_DEVICE_ID, BTN_TOOL_RUBBER },
+	{ PAD_DEVICE_ID, 0 },
+	{ CURSOR_DEVICE_ID, BTN_TOOL_MOUSE },
+	{ TOUCH_DEVICE_ID, BTN_TOOL_FINGER }
+};
+
 struct wacom {
 	struct input_dev *dev;
 	struct completion cmd_done;
-	int extra_z_bits;
+	int extra_z_bits, tool;
 	int idx;
 	unsigned char data[32];
 	char phys[32];
@@ -227,7 +241,7 @@ static void handle_response(struct wacom *wacom)
 static void handle_packet(struct wacom *wacom)
 {
 	int in_proximity_p, stylus_p, button, x, y, z;
-	int device;
+	int tool;
 
 	in_proximity_p = wacom->data[0] & 0x40;
 	stylus_p = wacom->data[0] & 0x20;
@@ -241,20 +255,23 @@ static void handle_packet(struct wacom *wacom)
 		z = z << 1 | (wacom->data[0] & 0x4);
 	z = z ^ (0x40 << wacom->extra_z_bits);
 
-	device = stylus_p ? STYLUS_DEVICE_ID : CURSOR_DEVICE_ID;
-	/* UNTESTED Graphire eraser (according to old wcmSerial code) */
-	if (button & 8)
-		device = ERASER_DEVICE_ID;
-	input_report_key(wacom->dev, ABS_MISC, device);
+	/* NOTE: According to old wcmSerial code, button&8 is the
+	 * eraser on Graphire tablets.  I have removed this until
+	 * someone can verify it. */
+	tool = stylus_p ? ((button & 4) ? ERASER : STYLUS) : CURSOR;
+
+	if (tool != wacom->tool && wacom->tool != 0) {
+		input_report_key(wacom->dev, tools[wacom->tool].input_id, 0);
+		input_sync(wacom->dev);
+	}
+	wacom->tool = tool;
+
+	input_report_key(wacom->dev, tools[tool].input_id, in_proximity_p);
+	input_report_key(wacom->dev, MSC_SERIAL, 1);
+	input_report_key(wacom->dev, ABS_MISC, in_proximity_p ? tools[tool].device_id : 0);
 	input_report_abs(wacom->dev, ABS_X, x);
 	input_report_abs(wacom->dev, ABS_Y, y);
 	input_report_abs(wacom->dev, ABS_PRESSURE, z);
-	input_report_key(wacom->dev, BTN_TOOL_MOUSE, in_proximity_p &&
-			                             !stylus_p);
-	input_report_key(wacom->dev, BTN_TOOL_RUBBER, in_proximity_p &&
-			                              stylus_p && button&4);
-	input_report_key(wacom->dev, BTN_TOOL_PEN, in_proximity_p && stylus_p &&
-                                                   !(button&4));
 	input_report_key(wacom->dev, BTN_TOUCH, button & 1);
 	input_report_key(wacom->dev, BTN_STYLUS, button & 2);
 	input_sync(wacom->dev);
@@ -403,6 +420,7 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 
 	wacom->dev = input_dev;
 	wacom->extra_z_bits = 1;
+	wacom->tool = wacom->idx = 0;
 	snprintf(wacom->phys, sizeof(wacom->phys), "%s/input0", serio->phys);
 
 	input_dev->name = DEVICE_NAME;
