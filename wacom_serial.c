@@ -155,10 +155,10 @@ static void handle_model_response(struct wacom *wacom)
 		wacom->dev->id.version = MODEL_PENPARTNER;
 		/* wcmSerial sets res 1000x1000 in this case. */
 		break;
-	case MODEL_GRAPHIRE:	/* UNTESTED */
+	case MODEL_GRAPHIRE:
 		p = "Graphire";
 		wacom->dev->id.version = MODEL_GRAPHIRE;
-		/* UNTESTED: Apparently Graphire models do not answer coordinate
+		/* Apparently Graphire models do not answer coordinate
 		   requests; see also wacom_setup(). */
 		input_set_abs_params(wacom->dev, ABS_X, 0, 5103, 0, 0);
 		input_set_abs_params(wacom->dev, ABS_Y, 0, 3711, 0, 0);
