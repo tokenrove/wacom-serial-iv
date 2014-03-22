@@ -46,7 +46,7 @@
 
 /* XXX To be removed before (widespread) release. */
 #ifndef SERIO_WACOM_IV
-#define SERIO_WACOM_IV 0x3d
+#define SERIO_WACOM_IV 0x3e
 #endif
 
 #define DRIVER_AUTHOR	"Julian Squires <julian@cipht.net>"

@@ -1,9 +1,11 @@
---- linux/include/linux/serio.h	2011-05-19 00:06:34.000000000 -0400
-+++ serio.h	2011-07-02 10:37:02.000000000 -0400
-@@ -199,5 +199,6 @@
- #define SERIO_DYNAPRO	0x3a
+diff --git a/include/uapi/linux/serio.h b/include/uapi/linux/serio.h
+index 9f53fa7..becdd78 100644
+--- a/include/uapi/linux/serio.h
++++ b/include/uapi/linux/serio.h
+@@ -76,5 +76,6 @@
  #define SERIO_HAMPSHIRE	0x3b
  #define SERIO_PS2MULT	0x3c
-+#define SERIO_WACOM_IV	0x3d
+ #define SERIO_TSC40	0x3d
++#define SERIO_WACOM_IV	0x3e
  
- #endif
+ #endif /* _UAPI_SERIO_H */
