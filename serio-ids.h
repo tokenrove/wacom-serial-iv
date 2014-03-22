@@ -125,8 +125,11 @@
 #ifndef SERIO_PSMULT
 # define SERIO_PS2MULT		0x3c
 #endif
+#ifndef SERIO_TSC40
+# define SERIO_TSC40		0x3d
+#endif
 #ifndef SERIO_WACOM_IV
-# define SERIO_WACOM_IV		0x3d
+# define SERIO_WACOM_IV		0x3e
 #endif
 
 #endif
