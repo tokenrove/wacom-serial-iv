@@ -88,6 +88,9 @@ MODULE_LICENSE("GPL");
 
 #define PAD_SERIAL 0xF0
 
+/* flags */
+#define F_HAS_STYLUS2		0x01
+
 enum { STYLUS = 1, ERASER, PAD, CURSOR, TOUCH };
 struct { int device_id; int input_id; } tools[] = { 
 	{ 0,0 },
@@ -101,7 +104,10 @@ struct { int device_id; int input_id; } tools[] = {
 struct wacom {
 	struct input_dev *dev;
 	struct completion cmd_done;
-	int extra_z_bits, tool;
+	int extra_z_bits;
+	int eraser_mask;
+	int flags;
+	int tool;
 	int idx;
 	unsigned char data[32];
 	char phys[32];
@@ -165,6 +171,8 @@ static void handle_model_response(struct wacom *wacom)
 		input_abs_set_res(wacom->dev, ABS_X, 1016);
 		input_abs_set_res(wacom->dev, ABS_Y, 1016);
 		wacom->extra_z_bits = 2;
+		wacom->eraser_mask = 0x08;
+		wacom->flags = F_HAS_STYLUS2;
 		break;
 	case MODEL_DIGITIZER_II:
 		p = "Digitizer II";
@@ -255,10 +263,10 @@ static void handle_packet(struct wacom *wacom)
 		z = z << 1 | (wacom->data[0] & 0x4);
 	z = z ^ (0x40 << wacom->extra_z_bits);
 
-	/* NOTE: According to old wcmSerial code, button&8 is the
-	 * eraser on Graphire tablets.  I have removed this until
-	 * someone can verify it. */
-	tool = stylus_p ? ((button & 4) ? ERASER : STYLUS) : CURSOR;
+	if (stylus_p)
+		tool = (button & wacom->eraser_mask) ? ERASER : STYLUS;
+	else
+		tool = CURSOR;
 
 	if (tool != wacom->tool && wacom->tool != 0) {
 		input_report_key(wacom->dev, tools[wacom->tool].input_id, 0);
@@ -274,6 +282,7 @@ static void handle_packet(struct wacom *wacom)
 	input_report_abs(wacom->dev, ABS_PRESSURE, z);
 	input_report_key(wacom->dev, BTN_TOUCH, button & 1);
 	input_report_key(wacom->dev, BTN_STYLUS, button & 2);
+	input_report_key(wacom->dev, BTN_STYLUS2, button & 4);
 	input_sync(wacom->dev);
 }
 
@@ -420,6 +429,7 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 
 	wacom->dev = input_dev;
 	wacom->extra_z_bits = 1;
+	wacom->eraser_mask = 0x04;
 	wacom->tool = wacom->idx = 0;
 	snprintf(wacom->phys, sizeof(wacom->phys), "%s/input0", serio->phys);
 
@@ -447,6 +457,9 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 	err = wacom_setup(wacom, serio);
 	if (err)
 		goto fail2;
+
+	if (wacom->flags & F_HAS_STYLUS2)
+		set_bit(BTN_STYLUS2, input_dev->keybit);
 
 	err = input_register_device(wacom->dev);
 	if (err)
