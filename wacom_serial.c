@@ -331,7 +331,7 @@ static void handle_packet(struct wacom *wacom)
 	if(wacom->extra_z_bits >= 1)
 		z = z << 1 | (wacom->data[3] & 0x4) >> 2;
 	if(wacom->extra_z_bits > 1)
-		z = z << 1 | (wacom->data[0] & 0x4);
+		z = z << 1 | (wacom->data[0] & 0x4) >> 2;
 	z = z ^ (0x40 << wacom->extra_z_bits);
 
 	if (stylus_p)
