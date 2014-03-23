@@ -327,12 +327,17 @@ static void handle_packet(struct wacom *wacom)
 	button = (wacom->data[3] & 0x78) >> 3;
 	x = (wacom->data[0] & 3) << 14 | wacom->data[1]<<7 | wacom->data[2];
 	y = (wacom->data[3] & 3) << 14 | wacom->data[4]<<7 | wacom->data[5];
-	z = wacom->data[6] & 0x7f;
-	if(wacom->extra_z_bits >= 1)
-		z = z << 1 | (wacom->data[3] & 0x4) >> 2;
-	if(wacom->extra_z_bits > 1)
-		z = z << 1 | (wacom->data[0] & 0x4) >> 2;
-	z = z ^ (0x40 << wacom->extra_z_bits);
+
+	if (in_proximity_p) {
+		z = wacom->data[6] & 0x7f;
+		if (wacom->extra_z_bits >= 1)
+			z = z << 1 | (wacom->data[3] & 0x4) >> 2;
+		if (wacom->extra_z_bits > 1)
+			z = z << 1 | (wacom->data[0] & 0x4) >> 2;
+		z = z ^ (0x40 << wacom->extra_z_bits);
+	} else {
+		z = -1;
+	}
 
 	if (stylus_p)
 		tool = (button & wacom->eraser_mask) ? ERASER : STYLUS;
@@ -545,7 +550,7 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 	input_abs_set_res(wacom->dev, ABS_Y, wacom->res_y);
 	input_set_abs_params(wacom->dev, ABS_X, 0, wacom->max_x, 0, 0);
 	input_set_abs_params(wacom->dev, ABS_Y, 0, wacom->max_y, 0, 0);
-	input_set_abs_params(wacom->dev, ABS_PRESSURE, 0,
+	input_set_abs_params(wacom->dev, ABS_PRESSURE, -1,
 			     (1 << (7 + wacom->extra_z_bits)) - 1, 0, 0);
 
 	err = input_register_device(wacom->dev);
