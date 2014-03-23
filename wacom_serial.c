@@ -16,7 +16,6 @@
  *  - support pad buttons;
  *  - support (protocol 4-style) tilt;
  *  - support suppress;
- *  - support Graphire relative wheel.
  *
  * This driver was developed with reference to much code written by others,
  * particularly:
@@ -363,6 +362,11 @@ static void handle_packet(struct wacom *wacom)
 		input_report_key(wacom->dev, BTN_LEFT, button & 1);
 		input_report_key(wacom->dev, BTN_RIGHT, button & 2);
 		input_report_key(wacom->dev, BTN_MIDDLE, button & 4);
+		/* handle relative wheel for non-stylus device */
+		z = (wacom->data[6] & 0x30) >> 4;
+		if (wacom->data[6] & 0x40)
+			z = -z;
+		input_report_rel(wacom->dev, REL_WHEEL, z);
 	}
 	input_sync(wacom->dev);
 }
@@ -522,7 +526,8 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 	input_dev->id.version = 0x0100;
 	input_dev->dev.parent = &serio->dev;
 
-	input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
+	input_dev->evbit[0] =
+		BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS) | BIT_MASK(EV_REL);
 	set_bit(ABS_MISC, input_dev->absbit);
 	set_bit(BTN_TOOL_PEN, input_dev->keybit);
 	set_bit(BTN_TOOL_RUBBER, input_dev->keybit);
@@ -532,6 +537,7 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 	set_bit(BTN_LEFT, input_dev->keybit);
 	set_bit(BTN_RIGHT, input_dev->keybit);
 	set_bit(BTN_MIDDLE, input_dev->keybit);
+	set_bit(REL_WHEEL, input_dev->relbit);
 
 	serio_set_drvdata(serio, wacom);
 

@@ -1,6 +1,5 @@
 -don't get resolution, etc. on models which don't support it
 -error out on unsupported models
--cursor support (buttons + scrollwheel)
 -tilt support
 -factor out: init_completion .. send .. wait for completion into a helper
 -cleanups (check-patch, read the code and fix whatever stands out)
