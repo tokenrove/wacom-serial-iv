@@ -356,9 +356,15 @@ static void handle_packet(struct wacom *wacom)
 	input_report_abs(wacom->dev, ABS_X, x);
 	input_report_abs(wacom->dev, ABS_Y, y);
 	input_report_abs(wacom->dev, ABS_PRESSURE, z);
-	input_report_key(wacom->dev, BTN_TOUCH, button & 1);
-	input_report_key(wacom->dev, BTN_STYLUS, button & 2);
-	input_report_key(wacom->dev, BTN_STYLUS2, button & 4);
+	if (stylus_p) {
+		input_report_key(wacom->dev, BTN_TOUCH, button & 1);
+		input_report_key(wacom->dev, BTN_STYLUS, button & 2);
+		input_report_key(wacom->dev, BTN_STYLUS2, button & 4);
+	} else {
+		input_report_key(wacom->dev, BTN_LEFT, button & 1);
+		input_report_key(wacom->dev, BTN_RIGHT, button & 2);
+		input_report_key(wacom->dev, BTN_MIDDLE, button & 4);
+	}
 	input_sync(wacom->dev);
 }
 
@@ -524,6 +530,9 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 	set_bit(BTN_TOOL_MOUSE, input_dev->keybit);
 	set_bit(BTN_TOUCH, input_dev->keybit);
 	set_bit(BTN_STYLUS, input_dev->keybit);
+	set_bit(BTN_LEFT, input_dev->keybit);
+	set_bit(BTN_RIGHT, input_dev->keybit);
+	set_bit(BTN_MIDDLE, input_dev->keybit);
 
 	serio_set_drvdata(serio, wacom);
 
