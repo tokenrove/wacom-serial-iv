@@ -352,7 +352,6 @@ static void handle_packet(struct wacom *wacom)
 	wacom->tool = tool;
 
 	input_report_key(wacom->dev, tools[tool].input_id, in_proximity_p);
-	input_report_key(wacom->dev, MSC_SERIAL, 1);
 	input_report_abs(wacom->dev, ABS_MISC, in_proximity_p ? tools[tool].device_id : 0);
 	input_report_abs(wacom->dev, ABS_X, x);
 	input_report_abs(wacom->dev, ABS_Y, y);
