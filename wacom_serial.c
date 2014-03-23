@@ -31,6 +31,83 @@
  *    Frederic Lepied and Raph Levien <raph@gtk.org>.
  */
 
+/*
+ * Wacom serial protocol 4 documentation taken from linuxwacom-0.9.9 code,
+ * protocol 4 uses 7 or 9 byte of data in the following format:
+ *
+ *	Byte 1
+ *	bit 7  Sync bit always 1
+ *	bit 6  Pointing device detected
+ *	bit 5  Cursor = 0 / Stylus = 1
+ *	bit 4  Reserved
+ *	bit 3  1 if a button on the pointing device has been pressed
+ *	bit 2  Reserved
+ *	bit 1  X15
+ *	bit 0  X14
+ *
+ *	Byte 2
+ *	bit 7  Always 0
+ *	bits 6-0 = X13 - X7
+ *
+ *	Byte 3
+ *	bit 7  Always 0
+ *	bits 6-0 = X6 - X0
+ *
+ *	Byte 4
+ *	bit 7  Always 0
+ *	bit 6  B3
+ *	bit 5  B2
+ *	bit 4  B1
+ *	bit 3  B0
+ *	bit 2  P0
+ *	bit 1  Y15
+ *	bit 0  Y14
+ *
+ *	Byte 5
+ *	bit 7  Always 0
+ *	bits 6-0 = Y13 - Y7
+ *
+ *	Byte 6
+ *	bit 7  Always 0
+ *	bits 6-0 = Y6 - Y0
+ *
+ *	Byte 7
+ *	bit 7 Always 0
+ *	bit 6  Sign of pressure data
+ *	bit 5  P6
+ *	bit 4  P5
+ *	bit 3  P4
+ *	bit 2  P3
+ *	bit 1  P2
+ *	bit 0  P1
+ *
+ *	byte 8 and 9 are optional and present only
+ *	in tilt mode.
+ *
+ *	Byte 8
+ *	bit 7 Always 0
+ *	bit 6 Sign of tilt X
+ *	bit 5  Xt6
+ *	bit 4  Xt5
+ *	bit 3  Xt4
+ *	bit 2  Xt3
+ *	bit 1  Xt2
+ *	bit 0  Xt1
+ *
+ *	Byte 9
+ *	bit 7 Always 0
+ *	bit 6 Sign of tilt Y
+ *	bit 5  Yt6
+ *	bit 4  Yt5
+ *	bit 3  Yt4
+ *	bit 2  Yt3
+ *	bit 1  Yt2
+ *	bit 0  Yt1
+ *
+ *	For more info see:
+ *	http://sourceforge.net/apps/mediawiki/linuxwacom/index.php?title=Serial_Protocol_IV
+ */
+
 /* XXX To be removed before (widespread) release. */
 #define DEBUG
 
