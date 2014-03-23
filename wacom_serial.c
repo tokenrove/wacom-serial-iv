@@ -519,11 +519,11 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 	input_dev->dev.parent = &serio->dev;
 
 	input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
-	__set_bit(BTN_TOOL_PEN, input_dev->keybit);
-	__set_bit(BTN_TOOL_RUBBER, input_dev->keybit);
-	__set_bit(BTN_TOOL_MOUSE, input_dev->keybit);
-	__set_bit(BTN_TOUCH, input_dev->keybit);
-	__set_bit(BTN_STYLUS, input_dev->keybit);
+	set_bit(BTN_TOOL_PEN, input_dev->keybit);
+	set_bit(BTN_TOOL_RUBBER, input_dev->keybit);
+	set_bit(BTN_TOOL_MOUSE, input_dev->keybit);
+	set_bit(BTN_TOUCH, input_dev->keybit);
+	set_bit(BTN_STYLUS, input_dev->keybit);
 
 	serio_set_drvdata(serio, wacom);
 
