@@ -184,6 +184,8 @@ struct wacom {
 	int extra_z_bits;
 	int eraser_mask;
 	int flags;
+	int res_x, res_y;
+	int max_x, max_y;
 	int tool;
 	int idx;
 	unsigned char data[32];
@@ -204,7 +206,7 @@ enum {
 
 static void handle_model_response(struct wacom *wacom)
 {
-	int major_v, minor_v, max_z;
+	int major_v, minor_v;
 	char *p;
 
 	major_v = minor_v = 0;
@@ -243,10 +245,10 @@ static void handle_model_response(struct wacom *wacom)
 		wacom->dev->id.version = MODEL_GRAPHIRE;
 		/* Apparently Graphire models do not answer coordinate
 		   requests; see also wacom_setup(). */
-		input_set_abs_params(wacom->dev, ABS_X, 0, 5103, 0, 0);
-		input_set_abs_params(wacom->dev, ABS_Y, 0, 3711, 0, 0);
-		input_abs_set_res(wacom->dev, ABS_X, 1016);
-		input_abs_set_res(wacom->dev, ABS_Y, 1016);
+		wacom->res_x = 1016;
+		wacom->res_y = 1016;
+		wacom->max_x = 5103;
+		wacom->max_y = 3711;
 		wacom->extra_z_bits = 2;
 		wacom->eraser_mask = 0x08;
 		wacom->flags = F_HAS_STYLUS2;
@@ -264,32 +266,24 @@ static void handle_model_response(struct wacom *wacom)
 		wacom->dev->id.version = MODEL_UNKNOWN;
 		break;
 	}
-	max_z = (1<<(7+wacom->extra_z_bits))-1;
 	dev_info(&wacom->dev->dev, "Wacom tablet: %s, version %u.%u\n", p,
 		 major_v, minor_v);
-	dev_dbg(&wacom->dev->dev, "Max pressure: %d.\n", max_z);
-	input_set_abs_params(wacom->dev, ABS_PRESSURE, 0, max_z, 0, 0);
 }
 
 
 static void handle_configuration_response(struct wacom *wacom)
 {
-	int x, y, skip;
+	int skip;
 
 	dev_dbg(&wacom->dev->dev, "Configuration string: %s\n", wacom->data);
-	sscanf(wacom->data, "~R%x,%u,%u,%u,%u", &skip, &skip, &skip, &x, &y);
-	input_abs_set_res(wacom->dev, ABS_X, x);
-	input_abs_set_res(wacom->dev, ABS_Y, y);
+	sscanf(wacom->data, "~R%x,%u,%u,%u,%u", &skip, &skip, &skip,
+	       &wacom->res_x, &wacom->res_y);
 }
 
 static void handle_coordinates_response(struct wacom *wacom)
 {
-	int x, y;
-
 	dev_dbg(&wacom->dev->dev, "Coordinates string: %s\n", wacom->data);
-	sscanf(wacom->data, "~C%u,%u", &x, &y);
-	input_set_abs_params(wacom->dev, ABS_X, 0, x, 0, 0);
-	input_set_abs_params(wacom->dev, ABS_Y, 0, y, 0, 0);
+	sscanf(wacom->data, "~C%u,%u", &wacom->max_x, &wacom->max_y);
 }
 
 static void handle_response(struct wacom *wacom)
@@ -546,6 +540,13 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 
 	if (wacom->flags & F_HAS_STYLUS2)
 		set_bit(BTN_STYLUS2, input_dev->keybit);
+
+	input_abs_set_res(wacom->dev, ABS_X, wacom->res_x);
+	input_abs_set_res(wacom->dev, ABS_Y, wacom->res_y);
+	input_set_abs_params(wacom->dev, ABS_X, 0, wacom->max_x, 0, 0);
+	input_set_abs_params(wacom->dev, ABS_Y, 0, wacom->max_y, 0, 0);
+	input_set_abs_params(wacom->dev, ABS_PRESSURE, 0,
+			     (1 << (7 + wacom->extra_z_bits)) - 1, 0, 0);
 
 	err = input_register_device(wacom->dev);
 	if (err)
