@@ -353,7 +353,7 @@ static void handle_packet(struct wacom *wacom)
 
 	input_report_key(wacom->dev, tools[tool].input_id, in_proximity_p);
 	input_report_key(wacom->dev, MSC_SERIAL, 1);
-	input_report_key(wacom->dev, ABS_MISC, in_proximity_p ? tools[tool].device_id : 0);
+	input_report_abs(wacom->dev, ABS_MISC, in_proximity_p ? tools[tool].device_id : 0);
 	input_report_abs(wacom->dev, ABS_X, x);
 	input_report_abs(wacom->dev, ABS_Y, y);
 	input_report_abs(wacom->dev, ABS_PRESSURE, z);
@@ -519,6 +519,7 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 	input_dev->dev.parent = &serio->dev;
 
 	input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
+	set_bit(ABS_MISC, input_dev->absbit);
 	set_bit(BTN_TOOL_PEN, input_dev->keybit);
 	set_bit(BTN_TOOL_RUBBER, input_dev->keybit);
 	set_bit(BTN_TOOL_MOUSE, input_dev->keybit);
