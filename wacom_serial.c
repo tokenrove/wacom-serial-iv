@@ -182,6 +182,8 @@ struct { int device_id; int input_id; } tools[] = {
 struct wacom {
 	struct input_dev *dev;
 	struct completion cmd_done;
+	int expect;
+	int result;
 	int extra_z_bits;
 	int eraser_mask;
 	int flags;
@@ -193,16 +195,12 @@ struct wacom {
 	char phys[32];
 };
 
-
 enum {
 	MODEL_CINTIQ		= 0x504C, /* PL */
 	MODEL_CINTIQ2		= 0x4454, /* DT */
 	MODEL_DIGITIZER_II	= 0x5544, /* UD */
 	MODEL_GRAPHIRE		= 0x4554, /* ET */
-	MODEL_INTUOS		= 0x4744, /* GD */
-	MODEL_INTUOS2		= 0x5844, /* XD */
 	MODEL_PENPARTNER	= 0x4354, /* CT */
-	MODEL_UNKNOWN		= 0
 };
 
 static void handle_model_response(struct wacom *wacom)
@@ -216,13 +214,6 @@ static void handle_model_response(struct wacom *wacom)
 		sscanf(p+1, "%u.%u", &major_v, &minor_v);
 
 	switch (wacom->data[2] << 8 | wacom->data[3]) {
-	case MODEL_INTUOS:	/* UNTESTED */
-	case MODEL_INTUOS2:
-		dev_info(&wacom->dev->dev, "Intuos tablets are not supported by"
-			 " this driver.\n");
-		p = "Intuos";
-		wacom->dev->id.version = MODEL_INTUOS;
-		break;
 	case MODEL_CINTIQ:	/* UNTESTED */
 	case MODEL_CINTIQ2:
 		p = "Cintiq";
@@ -262,17 +253,15 @@ static void handle_model_response(struct wacom *wacom)
 		if (major_v == 1 && minor_v <= 2)
 			wacom->extra_z_bits = 0; /* UNTESTED */
 		break;
-	default:		/* UNTESTED */
-		dev_dbg(&wacom->dev->dev, "Didn't understand Wacom model "
-			                  "string: %s\n", wacom->data);
-		p = "Unknown Protocol IV";
-		wacom->dev->id.version = MODEL_UNKNOWN;
-		break;
+	default:
+		dev_err(&wacom->dev->dev, "Unsupported Wacom model %s\n",
+			wacom->data);
+		wacom->result = -ENODEV;
+		return;
 	}
 	dev_info(&wacom->dev->dev, "Wacom tablet: %s, version %u.%u\n", p,
 		 major_v, minor_v);
 }
-
 
 static void handle_configuration_response(struct wacom *wacom)
 {
@@ -291,11 +280,15 @@ static void handle_coordinates_response(struct wacom *wacom)
 
 static void handle_response(struct wacom *wacom)
 {
-	if (wacom->data[0] != '~' || wacom->idx < 2) {
+	if (wacom->data[0] != '~' || wacom->data[1] != wacom->expect) {
 		dev_err(&wacom->dev->dev,
 			"Wacom got an unexpected response: %s\n", wacom->data);
+		wacom->result = -EIO;
+		complete(&wacom->cmd_done);
 		return;
 	}
+
+	wacom->result = 0;
 
 	switch (wacom->data[1]) {
 	case '#':
@@ -306,10 +299,6 @@ static void handle_response(struct wacom *wacom)
 		break;
 	case 'C':
 		handle_coordinates_response(wacom);
-		break;
-	default:
-		dev_dbg(&wacom->dev->dev, "got an unexpected response: %s\n",
-			wacom->data);
 		break;
 	}
 
@@ -468,20 +457,18 @@ static int wacom_send_and_wait(struct wacom *wacom, struct serio *serio,
 	int err;
 	unsigned long u;
 
+	wacom->expect = cmd[1];
 	init_completion(&wacom->cmd_done);
 	err = wacom_send(serio, cmd);
 	if (err)
 		return err;
 	u = wait_for_completion_timeout(&wacom->cmd_done, HZ);
 	if (u == 0) {
-		if(wacom->idx == 0) {
-			dev_err(&wacom->dev->dev,
-				"Timed out waiting for tablet %s\n", desc);
-			return -EIO;
-		}
+		/* Timeout, process what we've received. */
 		handle_response(wacom);
 	}
-	return 0;
+	wacom->expect = 0;
+	return wacom->result;
 }
 
 static int wacom_setup(struct wacom *wacom, struct serio *serio)
@@ -537,7 +524,6 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 	input_dev->id.bustype = BUS_RS232;
 	input_dev->id.vendor  = SERIO_WACOM_IV;
 	input_dev->id.product = serio->id.extra;
-	input_dev->id.version = 0x0100;
 	input_dev->dev.parent = &serio->dev;
 
 	input_dev->evbit[0] =
