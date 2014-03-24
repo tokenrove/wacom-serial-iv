@@ -164,6 +164,8 @@ MODULE_LICENSE("GPL");
 
 #define PAD_SERIAL 0xF0
 
+#define DATA_SIZE		32
+
 /* flags */
 #define F_HAS_STYLUS2		0x01
 
@@ -187,7 +189,7 @@ struct wacom {
 	int max_x, max_y;
 	int tool;
 	int idx;
-	unsigned char data[32];
+	unsigned char data[DATA_SIZE];
 	char phys[32];
 };
 
@@ -290,14 +292,10 @@ static void handle_coordinates_response(struct wacom *wacom)
 static void handle_response(struct wacom *wacom)
 {
 	if (wacom->data[0] != '~' || wacom->idx < 2) {
-		dev_dbg(&wacom->dev->dev, "got a garbled response of length "
-			                  "%d.\n", wacom->idx);
-		wacom->idx = 0;
+		dev_err(&wacom->dev->dev,
+			"Wacom got an unexpected response: %s\n", wacom->data);
 		return;
 	}
-
-	wacom->data[wacom->idx-1] = 0;
-	wacom->idx = 0;
 
 	switch (wacom->data[1]) {
 	case '#':
@@ -373,6 +371,11 @@ static void handle_packet(struct wacom *wacom)
 	input_sync(wacom->dev);
 }
 
+static void wacom_clear_data_buf(struct wacom *wacom)
+{
+	memset(wacom->data, 0, DATA_SIZE);
+	wacom->idx = 0;
+}
 
 static irqreturn_t wacom_interrupt(struct serio *serio, unsigned char data,
 				   unsigned int flags)
@@ -381,26 +384,33 @@ static irqreturn_t wacom_interrupt(struct serio *serio, unsigned char data,
 
 	if (data & 0x80)
 		wacom->idx = 0;
-	if (wacom->idx >= sizeof(wacom->data)) {
-		dev_dbg(&wacom->dev->dev, "throwing away %d bytes of garbage\n",
-			wacom->idx);
-		wacom->idx = 0;
-	}
 
-	wacom->data[wacom->idx++] = data;
-
-	/* We're either expecting a carriage return-terminated ASCII
+	/*
+	 * We're either expecting a carriage return-terminated ASCII
 	 * response string, or a seven-byte packet with the MSB set on
 	 * the first byte.
 	 *
 	 * Note however that some tablets (the PenPartner, for
 	 * example) don't send a carriage return at the end of a
-	 * command.  We handle these by waiting for timeout. */
+	 * command.  We handle these by waiting for timeout.
+	 */
+	if (data == '\r' && !(wacom->data[0] & 0x80)) {
+		handle_response(wacom);
+		wacom_clear_data_buf(wacom);
+		return IRQ_HANDLED;
+	}
+
+	/* Leave place for 0 termination */
+	if (wacom->idx > (DATA_SIZE - 2)) {
+		dev_dbg(&wacom->dev->dev,
+			"throwing away %d bytes of garbage\n", wacom->idx);
+		wacom_clear_data_buf(wacom);
+	}
+	wacom->data[wacom->idx++] = data;
+
 	if (wacom->idx == PACKET_LENGTH && (wacom->data[0] & 0x80)) {
 		handle_packet(wacom);
-		wacom->idx = 0;
-	} else if (data == '\r' && !(wacom->data[0] & 0x80)) {
-		handle_response(wacom);
+		wacom_clear_data_buf(wacom);
 	}
 	return IRQ_HANDLED;
 }

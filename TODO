@@ -9,3 +9,5 @@
  Signed-off-by: Julian Squires <julian@cipht.net>
 -check if wcmSerial.c reports rel-wheel events for all models, to avoid
  spurious rel-wheel events on non Graphires ...
+-make sure all messages are prefixed with Wacom as inputXX: does not tell
+ the user which device is exactly triggering the kernel messages
