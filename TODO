@@ -1,5 +1,5 @@
 -error out on unsupported models
--tilt support
+-suppress support
 -cleanups (check-patch, read the code and fix whatever stands out)
 -add properties:
  -cintiq always covers a screen ? Only set INPUT_PROP_DIRECT

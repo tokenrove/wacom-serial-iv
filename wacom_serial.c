@@ -13,8 +13,8 @@
  * please email me your results.
  *
  * To do:
- *  - support pad buttons;
- *  - support (protocol 4-style) tilt;
+ *  - support pad buttons; (requires access to a model with pad buttons)
+ *  - support (protocol 4-style) tilt (requires access to a > 1.4 rom model)
  *  - support suppress;
  *
  * This driver was developed with reference to much code written by others,
