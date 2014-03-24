@@ -9,3 +9,5 @@
 -timeouts maybe too short if HZ == 1000
 -fixup copyright header, got permisson from Julian for this +
  Signed-off-by: Julian Squires <julian@cipht.net>
+-check if wcmSerial.c reports rel-wheel events for all models, to avoid
+ spurious rel-wheel events on non Graphires ...

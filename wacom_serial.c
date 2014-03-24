@@ -327,7 +327,7 @@ static void handle_packet(struct wacom *wacom)
 	x = (wacom->data[0] & 3) << 14 | wacom->data[1]<<7 | wacom->data[2];
 	y = (wacom->data[3] & 3) << 14 | wacom->data[4]<<7 | wacom->data[5];
 
-	if (in_proximity_p) {
+	if (in_proximity_p && stylus_p) {
 		z = wacom->data[6] & 0x7f;
 		if (wacom->extra_z_bits >= 1)
 			z = z << 1 | (wacom->data[3] & 0x4) >> 2;
