@@ -40,7 +40,7 @@
  *	bit 5  Cursor = 0 / Stylus = 1
  *	bit 4  Reserved
  *	bit 3  1 if a button on the pointing device has been pressed
- *	bit 2  Reserved
+ *	bit 2  P0 (optional)
  *	bit 1  X15
  *	bit 0  X14
  *
@@ -58,7 +58,7 @@
  *	bit 5  B2
  *	bit 4  B1
  *	bit 3  B0
- *	bit 2  P0
+ *	bit 2  P1 (optional)
  *	bit 1  Y15
  *	bit 0  Y14
  *
@@ -72,13 +72,13 @@
  *
  *	Byte 7
  *	bit 7 Always 0
- *	bit 6  Sign of pressure data
- *	bit 5  P6
- *	bit 4  P5
- *	bit 3  P4
- *	bit 2  P3
- *	bit 1  P2
- *	bit 0  P1
+ *	bit 6  Sign of pressure data; or wheel-rel for cursor tool
+ *	bit 5  P7; or REL1 for cursor tool
+ *	bit 4  P6; or REL0 for cursor tool
+ *	bit 3  P5
+ *	bit 2  P4
+ *	bit 1  P3
+ *	bit 0  P2
  *
  *	byte 8 and 9 are optional and present only
  *	in tilt mode.
