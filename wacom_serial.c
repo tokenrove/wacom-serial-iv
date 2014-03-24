@@ -450,53 +450,45 @@ static int send_setup_string(struct wacom *wacom, struct serio *serio)
 	return wacom_send(serio, s);
 }
 
-static int wacom_setup(struct wacom *wacom, struct serio *serio)
+static int wacom_send_and_wait(struct wacom *wacom, struct serio *serio,
+	const char *cmd, const char *desc)
 {
 	int err;
 	unsigned long u;
 
-	/* Note that setting the link speed is the job of inputattach.
-	 * We assume that reset negotiation has already happened,
-	 * here. */
 	init_completion(&wacom->cmd_done);
-	err = wacom_send(serio, REQUEST_MODEL_AND_ROM_VERSION);
+	err = wacom_send(serio, cmd);
 	if (err)
 		return err;
 	u = wait_for_completion_timeout(&wacom->cmd_done, HZ);
 	if (u == 0) {
 		if(wacom->idx == 0) {
-			dev_info(&wacom->dev->dev, "Timed out waiting for tablet to "
-				 "respond with model and version.\n");
+			dev_err(&wacom->dev->dev,
+				"Timed out waiting for tablet %s\n", desc);
 			return -EIO;
 		}
 		handle_response(wacom);
 	}
+	return 0;
+}
 
-	init_completion(&wacom->cmd_done);
-	err = wacom_send(serio, REQUEST_CONFIGURATION_STRING);
+static int wacom_setup(struct wacom *wacom, struct serio *serio)
+{
+	int err;
+
+	/* Note that setting the link speed is the job of inputattach.
+	 * We assume that reset negotiation has already happened,
+	 * here. */
+	err = wacom_send_and_wait(wacom, serio, REQUEST_MODEL_AND_ROM_VERSION,
+				  "model and version");
 	if (err)
 		return err;
-	u = wait_for_completion_timeout(&wacom->cmd_done, HZ);
-	if (u == 0) {
-		if(wacom->idx == 0)
-			dev_info(&wacom->dev->dev, "Timed out waiting for tablet to "
-				 "respond with configuration string.  Continuing anyway.\n");
-		else
-			handle_response(wacom);
-	}
 
-	init_completion(&wacom->cmd_done);
-	err = wacom_send(serio, REQUEST_MAX_COORDINATES);
-	if (err)
-		return err;
-	u = wait_for_completion_timeout(&wacom->cmd_done, HZ);
-	if (u == 0) {
-		if(wacom->idx == 0)
-			dev_info(&wacom->dev->dev, "Timed out waiting for tablet to "
-				 "respond with coordinates string.  Continuing anyway.\n");
-		else
-			handle_response(wacom);
-	}
+	err = wacom_send_and_wait(wacom, serio, REQUEST_CONFIGURATION_STRING,
+				  "configuration string");
+
+	err = wacom_send_and_wait(wacom, serio, REQUEST_MAX_COORDINATES,
+				  "coordinates string");
 
 	return send_setup_string(wacom, serio);
 }

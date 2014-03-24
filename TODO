@@ -1,12 +1,11 @@
 -don't get resolution, etc. on models which don't support it
 -error out on unsupported models
 -tilt support
--factor out: init_completion .. send .. wait for completion into a helper
 -cleanups (check-patch, read the code and fix whatever stands out)
 -add properties:
  -cintiq always covers a screen ? Only set INPUT_PROP_DIRECT
  -everything else is a regular tablet, set INPUT_PROP_DIRECT + INPUT_PROP_POINTER
--timeouts maybe too short if HZ == 1000
+-timeouts can be shorter ?
 -fixup copyright header, got permisson from Julian for this +
  Signed-off-by: Julian Squires <julian@cipht.net>
 -check if wcmSerial.c reports rel-wheel events for all models, to avoid
