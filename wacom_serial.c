@@ -225,9 +225,12 @@ static void handle_model_response(struct wacom *wacom)
 	case MODEL_CINTIQ2:
 		p = "Cintiq";
 		wacom->dev->id.version = MODEL_CINTIQ;
+		wacom->res_x = 508;
+		wacom->res_y = 508;
 		switch (wacom->data[5]<<8 | wacom->data[6]) {
 		case 0x3731: /* PL-710 */
-			/* wcmSerial sets res to 2540x2540 in this case. */
+			wacom->res_x = 2540;
+			wacom->res_y = 2540;
 			/* fall through */
 		case 0x3535: /* PL-550 */
 		case 0x3830: /* PL-800 */
@@ -237,13 +240,12 @@ static void handle_model_response(struct wacom *wacom)
 	case MODEL_PENPARTNER:
 		p = "Penpartner";
 		wacom->dev->id.version = MODEL_PENPARTNER;
-		/* wcmSerial sets res 1000x1000 in this case. */
+		wacom->res_x = 1000;
+		wacom->res_y = 1000;
 		break;
 	case MODEL_GRAPHIRE:
 		p = "Graphire";
 		wacom->dev->id.version = MODEL_GRAPHIRE;
-		/* Apparently Graphire models do not answer coordinate
-		   requests; see also wacom_setup(). */
 		wacom->res_x = 1016;
 		wacom->res_y = 1016;
 		wacom->max_x = 5103;
@@ -484,11 +486,21 @@ static int wacom_setup(struct wacom *wacom, struct serio *serio)
 	if (err)
 		return err;
 
-	err = wacom_send_and_wait(wacom, serio, REQUEST_CONFIGURATION_STRING,
-				  "configuration string");
+	if (!(wacom->res_x && wacom->res_y)) {
+		err = wacom_send_and_wait(wacom, serio,
+					  REQUEST_CONFIGURATION_STRING,
+					  "configuration string");
+		if (err)
+			return err;
+	}
 
-	err = wacom_send_and_wait(wacom, serio, REQUEST_MAX_COORDINATES,
-				  "coordinates string");
+	if (!(wacom->max_x && wacom->max_y)) {
+		err = wacom_send_and_wait(wacom, serio,
+					  REQUEST_MAX_COORDINATES,
+					  "coordinates string");
+		if (err)
+			return err;
+	}
 
 	return send_setup_string(wacom, serio);
 }

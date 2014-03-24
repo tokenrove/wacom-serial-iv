@@ -1,4 +1,3 @@
--don't get resolution, etc. on models which don't support it
 -error out on unsupported models
 -tilt support
 -cleanups (check-patch, read the code and fix whatever stands out)
