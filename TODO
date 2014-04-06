@@ -1,5 +1,3 @@
--add per model names, see wacom_wac.c for a possible list
- (only re-use if serial model is identical to usb model)
 -cleanups (check-patch, read the code and fix whatever stands out)
 -add properties:
  -cintiq always covers a screen ? Only set INPUT_PROP_DIRECT
@@ -7,8 +5,7 @@
 -timeouts can be shorter ?
 -check if wcmSerial.c reports rel-wheel events for all models, to avoid
  spurious rel-wheel events on non Graphires ...
--make sure all messages are prefixed with Wacom as inputXX: does not tell
- the user which device is exactly triggering the kernel messages
+-Rename to wacom_serial4
 -Remove DEBUG, all XXX marked parts
 -Submit upstream with:
  Signed-off-by: Julian Squires <julian@cipht.net>

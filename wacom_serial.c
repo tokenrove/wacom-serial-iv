@@ -126,8 +126,6 @@
 #define SERIO_WACOM_IV 0x3e
 #endif
 
-#define DEVICE_NAME	"Wacom protocol 4 serial tablet"
-
 MODULE_AUTHOR("Julian Squires <julian@cipht.net>, Hans de Goede <hdegoede@redhat.com>");
 MODULE_DESCRIPTION("Wacom protocol 4 serial tablet driver");
 MODULE_LICENSE("GPL");
@@ -203,8 +201,13 @@ static void handle_model_response(struct wacom *wacom)
 	switch (wacom->data[2] << 8 | wacom->data[3]) {
 	case MODEL_CINTIQ:	/* UNTESTED */
 	case MODEL_CINTIQ2:
-		p = "Cintiq";
-		wacom->dev->id.version = MODEL_CINTIQ;
+		if ((wacom->data[2] << 8 | wacom->data[3]) == MODEL_CINTIQ) {
+			wacom->dev->name = "Wacom Cintiq";
+			wacom->dev->id.version = MODEL_CINTIQ;
+		} else {
+			wacom->dev->name = "Wacom Cintiq II";
+			wacom->dev->id.version = MODEL_CINTIQ2;
+		}
 		wacom->res_x = 508;
 		wacom->res_y = 508;
 		switch (wacom->data[5]<<8 | wacom->data[6]) {
@@ -218,13 +221,13 @@ static void handle_model_response(struct wacom *wacom)
 		}
 		break;
 	case MODEL_PENPARTNER:
-		p = "Penpartner";
+		wacom->dev->name = "Wacom Penpartner";
 		wacom->dev->id.version = MODEL_PENPARTNER;
 		wacom->res_x = 1000;
 		wacom->res_y = 1000;
 		break;
 	case MODEL_GRAPHIRE:
-		p = "Graphire";
+		wacom->dev->name = "Wacom Graphire";
 		wacom->dev->id.version = MODEL_GRAPHIRE;
 		wacom->res_x = 1016;
 		wacom->res_y = 1016;
@@ -235,7 +238,7 @@ static void handle_model_response(struct wacom *wacom)
 		wacom->flags = F_HAS_STYLUS2;
 		break;
 	case MODEL_DIGITIZER_II:
-		p = "Digitizer II";
+		wacom->dev->name = "Wacom Digitizer II";
 		wacom->dev->id.version = MODEL_DIGITIZER_II;
 		if (major_v == 1 && minor_v <= 2)
 			wacom->extra_z_bits = 0; /* UNTESTED */
@@ -246,8 +249,8 @@ static void handle_model_response(struct wacom *wacom)
 		wacom->result = -ENODEV;
 		return;
 	}
-	dev_info(&wacom->dev->dev, "Wacom tablet: %s, version %u.%u\n", p,
-		 major_v, minor_v);
+	dev_info(&wacom->dev->dev, "%s tablet, version %u.%u\n",
+		 wacom->dev->name, major_v, minor_v);
 }
 
 static void handle_configuration_response(struct wacom *wacom)
@@ -506,8 +509,6 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 	wacom->eraser_mask = 0x04;
 	wacom->tool = wacom->idx = 0;
 	snprintf(wacom->phys, sizeof(wacom->phys), "%s/input0", serio->phys);
-
-	input_dev->name = DEVICE_NAME;
 	input_dev->phys = wacom->phys;
 	input_dev->id.bustype = BUS_RS232;
 	input_dev->id.vendor  = SERIO_WACOM_IV;
