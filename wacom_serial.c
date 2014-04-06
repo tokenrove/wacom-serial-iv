@@ -1,20 +1,17 @@
 /*
  * Wacom protocol 4 serial tablet driver
  *
+ * Copyright 2014      Hans de Goede <hdegoede@redhat.com>
+ * Copyright 2011-2012 Julian Squires <julian@cipht.net>
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version of 2 of the License, or (at your
+ * option) any later version. See the file COPYING in the main directory of
+ * this archive for more details.
+ *
  * Many thanks to Bill Seremetis, without whom PenPartner support
- * would not have been possible.
- *
- * Thanks to Patrick Mahoney.
- *
- * Sections I have been unable to test personally due to lack of
- * available hardware are marked UNTESTED.  Much of what is marked
- * UNTESTED comes from reading the wcmSerial code in linuxwacom 0.9.0.
- * If you have a tablet that corresponds to an UNTESTED section,
- * please email me your results.
- *
- * To do:
- *  - support pad buttons; (requires access to a model with pad buttons)
- *  - support (protocol 4-style) tilt (requires access to a > 1.4 rom model)
+ * would not have been possible. Thanks to Patrick Mahoney.
  *
  * This driver was developed with reference to much code written by others,
  * particularly:
@@ -27,6 +24,10 @@
  *    Ping Cheng, Wacom. <pingc@wacom.com>;
  *  - and xf86wacom.c (a presumably ancient version of the linuxwacom code), by
  *    Frederic Lepied and Raph Levien <raph@gtk.org>.
+ *
+ * To do:
+ *  - support pad buttons; (requires access to a model with pad buttons)
+ *  - support (protocol 4-style) tilt (requires access to a > 1.4 rom model)
  */
 
 /*
@@ -124,12 +125,10 @@
 #define SERIO_WACOM_IV 0x3e
 #endif
 
-#define DRIVER_AUTHOR	"Julian Squires <julian@cipht.net>"
 #define DEVICE_NAME	"Wacom protocol 4 serial tablet"
-#define DRIVER_DESC	DEVICE_NAME " driver"
 
-MODULE_AUTHOR(DRIVER_AUTHOR);
-MODULE_DESCRIPTION(DRIVER_DESC);
+MODULE_AUTHOR("Julian Squires <julian@cipht.net>, Hans de Goede <hdegoede@redhat.com>");
+MODULE_DESCRIPTION("Wacom protocol 4 serial tablet driver");
 MODULE_LICENSE("GPL");
 
 #define REQUEST_MODEL_AND_ROM_VERSION	"~#"
@@ -587,7 +586,7 @@ static struct serio_driver wacom_drv = {
 	.driver		= {
 		.name	= "wacom_serial",
 	},
-	.description	= DRIVER_DESC,
+	.description	= "Wacom protocol 4 serial tablet driver",
 	.id_table	= wacom_serio_ids,
 	.interrupt	= wacom_interrupt,
 	.connect	= wacom_connect,
