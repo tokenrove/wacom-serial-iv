@@ -110,15 +110,16 @@
 /* XXX To be removed before (widespread) release. */
 #define DEBUG
 
-#include <linux/string.h>
-#include <linux/module.h>
-#include <linux/kernel.h>
+#include <linux/completion.h>
 #include <linux/init.h>
-#include <linux/interrupt.h>
 #include <linux/input.h>
+#include <linux/interrupt.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
 #include <linux/serio.h>
 #include <linux/slab.h>
-#include <linux/completion.h>
+#include <linux/string.h>
+#include "wacom_wac.h"
 
 /* XXX To be removed before (widespread) release. */
 #ifndef SERIO_WACOM_IV
@@ -151,30 +152,18 @@ MODULE_LICENSE("GPL");
 #define COMMAND_Z_FILTER			"ZF1\r"
 
 /* Note that this is a protocol 4 packet without tilt information. */
-#define PACKET_LENGTH 7
-
-/* device IDs from wacom_wac.h */
-#define STYLUS_DEVICE_ID	0x02
-#define TOUCH_DEVICE_ID         0x03
-#define CURSOR_DEVICE_ID        0x06
-#define ERASER_DEVICE_ID        0x0A
-#define PAD_DEVICE_ID           0x0F
-
-#define PAD_SERIAL 0xF0
-
+#define PACKET_LENGTH		7
 #define DATA_SIZE		32
 
 /* flags */
 #define F_HAS_STYLUS2		0x01
 
-enum { STYLUS = 1, ERASER, PAD, CURSOR, TOUCH };
+enum { STYLUS = 1, ERASER, CURSOR };
 struct { int device_id; int input_id; } tools[] = { 
 	{ 0,0 },
 	{ STYLUS_DEVICE_ID, BTN_TOOL_PEN },
 	{ ERASER_DEVICE_ID, BTN_TOOL_RUBBER },
-	{ PAD_DEVICE_ID, 0 },
 	{ CURSOR_DEVICE_ID, BTN_TOOL_MOUSE },
-	{ TOUCH_DEVICE_ID, BTN_TOOL_FINGER }
 };
 
 struct wacom {
@@ -337,7 +326,8 @@ static void handle_packet(struct wacom *wacom)
 	wacom->tool = tool;
 
 	input_report_key(wacom->dev, tools[tool].input_id, in_proximity_p);
-	input_report_abs(wacom->dev, ABS_MISC, in_proximity_p ? tools[tool].device_id : 0);
+	input_report_abs(wacom->dev, ABS_MISC,
+			 in_proximity_p ? tools[tool].device_id : 0);
 	input_report_abs(wacom->dev, ABS_X, x);
 	input_report_abs(wacom->dev, ABS_Y, y);
 	input_report_abs(wacom->dev, ABS_PRESSURE, z);
