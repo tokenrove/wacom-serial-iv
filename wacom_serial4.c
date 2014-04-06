@@ -575,7 +575,7 @@ MODULE_DEVICE_TABLE(serio, wacom_serio_ids);
 
 static struct serio_driver wacom_drv = {
 	.driver		= {
-		.name	= "wacom_serial",
+		.name	= "wacom_serial4",
 	},
 	.description	= "Wacom protocol 4 serial tablet driver",
 	.id_table	= wacom_serio_ids,

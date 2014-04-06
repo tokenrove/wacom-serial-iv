@@ -1,4 +1,4 @@
-obj-m += wacom_serial.o
+obj-m += wacom_serial4.o
 
 all: modules inputattach
 

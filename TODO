@@ -5,7 +5,6 @@
 -timeouts can be shorter ?
 -check if wcmSerial.c reports rel-wheel events for all models, to avoid
  spurious rel-wheel events on non Graphires ...
--Rename to wacom_serial4
 -Remove DEBUG, all XXX marked parts
 -Submit upstream with:
  Signed-off-by: Julian Squires <julian@cipht.net>
