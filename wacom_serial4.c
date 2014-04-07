@@ -154,7 +154,8 @@ MODULE_LICENSE("GPL");
 #define DATA_SIZE		32
 
 /* flags */
-#define F_HAS_STYLUS2		0x01
+#define F_COVERS_SCREEN		0x01
+#define F_HAS_STYLUS2		0x02
 
 enum { STYLUS = 1, ERASER, CURSOR };
 struct { int device_id; int input_id; } tools[] = { 
@@ -219,6 +220,7 @@ static void handle_model_response(struct wacom *wacom)
 		case 0x3830: /* PL-800 */
 			wacom->extra_z_bits = 2;
 		}
+		wacom->flags = F_COVERS_SCREEN;
 		break;
 	case MODEL_PENPARTNER:
 		wacom->dev->name = "Wacom Penpartner";
@@ -537,6 +539,10 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 	err = wacom_setup(wacom, serio);
 	if (err)
 		goto fail2;
+
+	set_bit(INPUT_PROP_DIRECT, input_dev->propbit);
+	if (!(wacom->flags & F_COVERS_SCREEN))
+		set_bit(INPUT_PROP_POINTER, input_dev->propbit);
 
 	if (wacom->flags & F_HAS_STYLUS2)
 		set_bit(BTN_STYLUS2, input_dev->keybit);

@@ -1,8 +1,4 @@
 -cleanups (check-patch, read the code and fix whatever stands out)
--add properties:
- -cintiq always covers a screen ? Only set INPUT_PROP_DIRECT
- -everything else is a regular tablet, set INPUT_PROP_DIRECT + INPUT_PROP_POINTER
--timeouts can be shorter ?
 -check if wcmSerial.c reports rel-wheel events for all models, to avoid
  spurious rel-wheel events on non Graphires ...
 -Remove DEBUG, all XXX marked parts
