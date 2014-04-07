@@ -156,6 +156,7 @@ MODULE_LICENSE("GPL");
 /* flags */
 #define F_COVERS_SCREEN		0x01
 #define F_HAS_STYLUS2		0x02
+#define F_HAS_SCROLLWHEEL	0x04
 
 enum { STYLUS = 1, ERASER, CURSOR };
 struct { int device_id; int input_id; } tools[] = { 
@@ -237,7 +238,7 @@ static void handle_model_response(struct wacom *wacom)
 		wacom->max_y = 3711;
 		wacom->extra_z_bits = 2;
 		wacom->eraser_mask = 0x08;
-		wacom->flags = F_HAS_STYLUS2;
+		wacom->flags = F_HAS_STYLUS2 | F_HAS_SCROLLWHEEL;
 		break;
 	case MODEL_DIGITIZER_II:
 		wacom->dev->name = "Wacom Digitizer II";
@@ -528,7 +529,6 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 	set_bit(BTN_LEFT, input_dev->keybit);
 	set_bit(BTN_RIGHT, input_dev->keybit);
 	set_bit(BTN_MIDDLE, input_dev->keybit);
-	set_bit(REL_WHEEL, input_dev->relbit);
 
 	serio_set_drvdata(serio, wacom);
 
@@ -546,6 +546,9 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 
 	if (wacom->flags & F_HAS_STYLUS2)
 		set_bit(BTN_STYLUS2, input_dev->keybit);
+
+	if (wacom->flags & F_HAS_SCROLLWHEEL)
+		set_bit(REL_WHEEL, input_dev->relbit);
 
 	input_abs_set_res(wacom->dev, ABS_X, wacom->res_x);
 	input_abs_set_res(wacom->dev, ABS_Y, wacom->res_y);
