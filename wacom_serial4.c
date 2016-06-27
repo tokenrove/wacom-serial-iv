@@ -394,13 +394,21 @@ static irqreturn_t wacom_interrupt(struct serio *serio, unsigned char data,
 		return IRQ_HANDLED;
 	}
 
+        if (data == '~' && wacom->idx > 0 && !(wacom->data[0] & 0x80)) {
+                handle_response(wacom);
+                wacom_clear_data_buf(wacom);
+                wacom->data[0] = data;
+                wacom->idx = 0;
+                return IRQ_HANDLED;
+        }
+
 	/* Leave place for 0 termination */
 	if (wacom->idx > (DATA_SIZE - 2)) {
 		dev_dbg(&wacom->dev->dev,
                         "throwing away %d bytes of garbage\n", wacom->idx);
                 print_hex_dump_debug("wacom_serial4", DUMP_PREFIX_OFFSET, 16, 1,
                                      wacom->data, DATA_SIZE, 1);
-		wacom_clear_data_buf(wacom);
+                wacom_clear_data_buf(wacom);
 	}
 	wacom->data[wacom->idx++] = data;
 
