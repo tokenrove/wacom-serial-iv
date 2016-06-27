@@ -275,8 +275,10 @@ static void handle_response(struct wacom *wacom)
 {
 	if (wacom->data[0] != '~' || wacom->data[1] != wacom->expect) {
 		dev_err(&wacom->dev->dev,
-			"Wacom got an unexpected response: %s\n", wacom->data);
-		wacom->result = -EIO;
+                        "Wacom got an unexpected response: %s\n", wacom->data);
+                print_hex_dump_debug("wacom_serial4", DUMP_PREFIX_OFFSET, 16, 1,
+                                     wacom->data, wacom->idx, 1);
+                wacom->result = -EIO;
 		complete(&wacom->cmd_done);
 		return;
 	}
@@ -395,7 +397,9 @@ static irqreturn_t wacom_interrupt(struct serio *serio, unsigned char data,
 	/* Leave place for 0 termination */
 	if (wacom->idx > (DATA_SIZE - 2)) {
 		dev_dbg(&wacom->dev->dev,
-			"throwing away %d bytes of garbage\n", wacom->idx);
+                        "throwing away %d bytes of garbage\n", wacom->idx);
+                print_hex_dump_debug("wacom_serial4", DUMP_PREFIX_OFFSET, 16, 1,
+                                     wacom->data, DATA_SIZE, 1);
 		wacom_clear_data_buf(wacom);
 	}
 	wacom->data[wacom->idx++] = data;
