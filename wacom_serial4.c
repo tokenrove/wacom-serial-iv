@@ -273,15 +273,8 @@ static void handle_coordinates_response(struct wacom *wacom)
 
 static void handle_response(struct wacom *wacom)
 {
-	if (wacom->data[0] != '~' || wacom->data[1] != wacom->expect) {
-		dev_err(&wacom->dev->dev,
-                        "Wacom got an unexpected response: %s\n", wacom->data);
-                print_hex_dump_debug("wacom_serial4", DUMP_PREFIX_OFFSET, 16, 1,
-                                     wacom->data, wacom->idx, 1);
-                wacom->result = -EIO;
-		complete(&wacom->cmd_done);
-		return;
-	}
+        if (wacom->data[0] != '~')
+                goto unexpected_response;
 
 	wacom->result = 0;
 
@@ -294,8 +287,15 @@ static void handle_response(struct wacom *wacom)
 		break;
 	case 'C':
 		handle_coordinates_response(wacom);
-		break;
-	}
+                break;
+        default:
+        unexpected_response:
+                dev_err(&wacom->dev->dev,
+                        "Wacom got an unexpected response: %s\n", wacom->data);
+                print_hex_dump_debug("wacom_serial4", DUMP_PREFIX_OFFSET, 16, 1,
+                                     wacom->data, wacom->idx, 1);
+                wacom->result = -EIO;
+        }
 
 	complete(&wacom->cmd_done);
 }
