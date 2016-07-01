@@ -387,13 +387,6 @@ static irqreturn_t wacom_interrupt(struct serio *serio, unsigned char data,
 	/*
 	 * speculation about PenPartner behavior
          */
-	if (data == '\n') {
-		dev_dbg(&wacom->dev->dev,
-			"dropping extraneous newline at %d\n", wacom->idx);
-		wacom_clear_data_buf(wacom);
-		return IRQ_HANDLED;
-	}
-
         if (data == '~' && wacom->idx > 0 && !(wacom->data[0] & 0x80)) {
                 handle_response(wacom);
                 wacom_clear_data_buf(wacom);
