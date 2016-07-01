@@ -398,7 +398,7 @@ static irqreturn_t wacom_interrupt(struct serio *serio, unsigned char data,
                 handle_response(wacom);
                 wacom_clear_data_buf(wacom);
                 wacom->data[0] = data;
-                wacom->idx = 0;
+                wacom->idx = 1;
                 return IRQ_HANDLED;
         }
 
