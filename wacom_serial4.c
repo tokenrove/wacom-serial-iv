@@ -551,8 +551,10 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 		goto fail1;
 
 	err = wacom_setup(wacom, serio);
-	if (err)
+	if (err) {
+            	dev_dbg(&wacom->dev->dev, "wacom_setup failed: %d\n", err);
 		goto fail2;
+	}
 
 	set_bit(INPUT_PROP_DIRECT, input_dev->propbit);
 	if (!(wacom->flags & F_COVERS_SCREEN))
