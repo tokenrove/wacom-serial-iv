@@ -574,8 +574,10 @@ static int wacom_connect(struct serio *serio, struct serio_driver *drv)
 			     (1 << (7 + wacom->extra_z_bits)) - 1, 0, 0);
 
 	err = input_register_device(wacom->dev);
-	if (err)
-		goto fail2;
+        if (err) {
+                dev_dbg(&wacom->dev->dev, "input_register_device failed: %d\n", err);
+                goto fail2;
+        }
 
 	return 0;
 
