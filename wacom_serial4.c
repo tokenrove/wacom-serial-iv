@@ -151,7 +151,7 @@ MODULE_LICENSE("GPL");
 
 /* Note that this is a protocol 4 packet without tilt information. */
 #define PACKET_LENGTH		7
-#define DATA_SIZE		32
+#define DATA_SIZE		36
 
 /* flags */
 #define F_COVERS_SCREEN		0x01
